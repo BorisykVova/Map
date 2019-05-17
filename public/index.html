@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Geolocation</title>
+    <script src="https://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="style.css">
+    <meta charset="utf-8">
+</head>
+<body>
+
+<div id="floating-panel">
+    <input onclick="clearMarkers();" type=button value="Hide Markers">
+    <input onclick="showMarkers();" type=button value="Show All Markers">
+    <input onclick="deleteMarkers();" type=button value="Delete Markers">
+</div>
+
+<div id="map"></div>
+
+<script>
+
+
+    let map;
+    let markers = [];
+
+    function initMap() {
+        let myLocation  = {lat: 49.233123, lng: 28.468439};
+
+        index = new google.maps.Map(document.getElementById('map'), {
+            zoom: 12,
+            center: myLocation ,
+            mapTypeId: 'terrain'
+        });
+
+        // This event listener will call addMarker() when the map is clicked.
+        index.addListener('click', function(event) {
+            addMarker(event.latLng);
+        });
+
+    }
+
+    // Adds a marker to the map and push to the array.
+    function addMarker(location) {
+        let marker = new google.maps.Marker({
+            position: location,
+            map: index
+        });
+
+        GetLatLng(location.lat(), location.lng(), function(temperature, result) {
+            let info = new google.maps.InfoWindow({
+                content: '<div>'+
+                    '<table frame="border" bordercolor="#59a69e" rules="cols" cellspacing="2">'+
+                    '<tr align="center">'+
+                    '<th rowspan="2">'+result.icon+'</th>' +
+                    '<th>Температура повітря,°C</th>' +
+                    '<th>Часовий пояс</th>' +
+                    '<th>Вологість повітря,%</th>'+
+                    '<th>Ймовірність опадів,%</th>' +
+                    '<th>Вітер,м/с</th>'+
+                    '</tr>'+
+                    '<tr align="center">'+
+                    '<td>'+temperature+'</td>' +
+                    '<td>'+result.timezone+'</td>'+
+                    '<td>'+result.currently.humidity * 100+'</td>' +
+                    '<td>'+Math.round(result.currently.precipProbability * 100)+'</td>'+
+                    '<td>'+Math.round(result.currently.windSpeed)+'</td>'+
+                    '</tr>'+
+                    '</table>'+
+                    '</div>'
+            });
+            marker.addListener("click", function() {
+                info.open(index, marker);
+            });
+            markers.push(marker);
+            index.panTo(location);
+        });
+
+    }
+
+    // Sets the map on all markers in the array.
+    function setMapOnAll(index) {
+        for (let i = 0; i < markers.length; i++) {
+            console.log(markers[i])
+            markers[i].setMap(index);
+        }
+    }
+
+    // Removes the markers from the map, but keeps them in the array.
+    function clearMarkers() {
+        console.log('clearMarkers');
+        setMapOnAll(null);
+    }
+
+    // Shows any markers currently in the array.
+    function showMarkers() {
+        console.log('showMarkers');
+        setMapOnAll(index);
+    }
+
+    // Deletes all markers in the array by removing references to them.
+    function deleteMarkers() {
+        console.log('deleteMarkers');
+        clearMarkers();
+        markers = [];
+    }
+
+
+    function GetLatLng(lat, lng, cb) {
+        $.ajax({
+            url: "/api",
+            contentType: "application/json",
+            method: "POST",
+            data: JSON.stringify({
+                latitude: lat,
+                longitude: lng
+            }),
+            success: function (result) {
+                console.log(result);
+                let temperature = Math.round((result.currently.temperature - 32) * 5 / 9);
+
+                cb(temperature, result);
+            }
+        });
+
+    }
+
+</script>
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAjRzamXvXulDTQWIBuWtkCsZpJuPf81PU&callback=initMap">
+</script>
+</body>
+</html>
